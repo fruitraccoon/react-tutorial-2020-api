@@ -1,39 +1,17 @@
 import { Request, Response, response } from 'express';
 import { v4 as uuid } from 'uuid';
-
-interface Poll {
-  id: string;
-  text: string;
-  imageUri: string;
-  allowMultiple: boolean;
-  dateCreated: string;
-  createdBy: User;
-  options: PollOption[];
-}
-
-interface PollOption {
-  id: string;
-  text: string;
-  imageUri: string;
-  voteCount: number;
-  votedForByUser: boolean;
-}
-
-interface User {
-  displayName: string;
-  avatarUri: string;
-}
+import { CreatePollDto, PollDto, UserDto } from './types';
 
 function nowAsString() {
   return new Date().toISOString();
 }
 
-const systemUser: User = {
+const systemUser: UserDto = {
   displayName: 'System',
   avatarUri: 'https://cdn.auth0.com/avatars/sy.png',
 };
 
-const defaultPoll1: Poll = {
+const defaultPoll1: PollDto = {
   id: uuid(),
   text: 'Do you prefer cats or dogs?',
   imageUri: '',
@@ -58,7 +36,7 @@ const defaultPoll1: Poll = {
   ],
 };
 
-const defaultPoll2: Poll = {
+const defaultPoll2: PollDto = {
   id: uuid(),
   text: "What's your favourite colour?",
   imageUri: '',
@@ -90,27 +68,15 @@ const defaultPoll2: Poll = {
   ],
 };
 
-const pollsDb: Poll[] = [defaultPoll1, defaultPoll2];
+const pollsDb: PollDto[] = [defaultPoll1, defaultPoll2];
 
-export function getPolls(req: Request, res: Response<Poll[]>) {
+export function getPolls(req: Request, res: Response<PollDto[]>) {
   res.json(pollsDb);
-}
-
-interface CreatePollDto {
-  allowMultiple: boolean;
-  imageUri: string;
-  text: string;
-  options: CreatePollOptionDto[];
-}
-
-interface CreatePollOptionDto {
-  imageUri: string;
-  text: string;
 }
 
 export function createPoll(req: Request<{}, string, CreatePollDto>, res: Response<string>) {
   const dto = req.body;
-  const poll: Poll = {
+  const poll: PollDto = {
     ...dto,
     id: uuid(),
     dateCreated: nowAsString(),
@@ -126,7 +92,7 @@ export function createPoll(req: Request<{}, string, CreatePollDto>, res: Respons
   response.json(poll.id);
 }
 
-export function getPoll(req: Request<{ id: string }, Poll>, res: Response<Poll>) {
+export function getPoll(req: Request<{ id: string }, PollDto>, res: Response<PollDto>) {
   const poll = pollsDb.find((p) => p.id === req.params.id);
   res.json(poll);
 }

@@ -26,6 +26,13 @@ app.use(cors({ origin: '*' }));
 
 app.get('/', (req, res) => res.json('The PurPoll API Server is awake!'));
 
+app.get('/definitions', (req, res) =>
+  res.sendFile('types.ts', {
+    root: __dirname,
+    headers: { 'Content-Type': 'text/plain' },
+  })
+);
+
 app.use('/api', createApi(checkJwt));
 
 app.listen(port, () => console.log(`Example app listening at http://localhost:${port}`));
