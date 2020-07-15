@@ -1,5 +1,8 @@
 import { Router } from 'express';
+import { createPoll, getPoll, getPolls } from './polls';
 
 export const api = Router();
 
-api.get('/', (req, res) => res.send('Hello World!'));
+api.get('/polls', getPolls);
+api.get('/polls/:id', getPoll);
+api.post('/polls', createPoll);
