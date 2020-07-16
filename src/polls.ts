@@ -1,98 +1,94 @@
-import { Request, Response, response } from 'express';
+import {
+  NextFunction,
+  Request,
+  Response,
+  response
+  } from 'express';
 import { v4 as uuid } from 'uuid';
-import { CreatePollDto, PollDto, UserDto } from './types';
+import { defaultPoll1, defaultPoll2, systemUser } from './defaults';
+import { CreatePollDto, PollDto, PollVotesDto } from './dtoTypes';
+import { Poll, User } from './types';
+import { nowAsString, provideUser, provideUserStrict } from './utils';
 
-function nowAsString() {
-  return new Date().toISOString();
-}
+const pollsDb: Poll[] = [defaultPoll1, defaultPoll2];
 
-const systemUser: UserDto = {
-  displayName: 'System',
-  avatarUri: 'https://cdn.auth0.com/avatars/sy.png',
-};
-
-const defaultPoll1: PollDto = {
-  id: uuid(),
-  text: 'Do you prefer cats or dogs?',
-  imageUri: '',
-  allowMultiple: false,
-  dateCreated: nowAsString(),
-  createdBy: systemUser,
-  options: [
-    {
-      id: uuid(),
-      text: 'Cats',
-      imageUri: '',
-      voteCount: 0,
-      votedForByUser: false,
-    },
-    {
-      id: uuid(),
-      text: 'Dogs',
-      imageUri: '',
-      voteCount: 0,
-      votedForByUser: false,
-    },
-  ],
-};
-
-const defaultPoll2: PollDto = {
-  id: uuid(),
-  text: "What's your favourite colour?",
-  imageUri: '',
-  allowMultiple: false,
-  dateCreated: nowAsString(),
-  createdBy: systemUser,
-  options: [
-    {
-      id: uuid(),
-      text: 'Red',
-      imageUri: '',
-      voteCount: 0,
-      votedForByUser: false,
-    },
-    {
-      id: uuid(),
-      text: 'Green',
-      imageUri: '',
-      voteCount: 0,
-      votedForByUser: false,
-    },
-    {
-      id: uuid(),
-      text: 'Blue',
-      imageUri: '',
-      voteCount: 0,
-      votedForByUser: false,
-    },
-  ],
-};
-
-const pollsDb: PollDto[] = [defaultPoll1, defaultPoll2];
-
-export function getPolls(req: Request, res: Response<PollDto[]>) {
-  res.json(pollsDb);
-}
-
-export function createPoll(req: Request<{}, string, CreatePollDto>, res: Response<string>) {
-  const dto = req.body;
-  const poll: PollDto = {
-    ...dto,
-    id: uuid(),
-    dateCreated: nowAsString(),
-    createdBy: systemUser,
-    options: dto.options.map((o) => ({
-      ...o,
-      id: uuid(),
-      voteCount: 0,
-      votedForByUser: false,
-    })),
+function toPollDto(poll: Poll, currentUserId: string | undefined): PollDto {
+  return {
+    ...poll,
+    options: poll.options.map((o) => {
+      const { votedForBy, ...rest } = o;
+      return {
+        ...rest,
+        voteCount: votedForBy.length,
+        votedForByUser: votedForBy.some((u) => u.id === currentUserId),
+      };
+    }),
   };
-  pollsDb.push(poll);
-  response.json(poll.id);
 }
 
-export function getPoll(req: Request<{ id: string }, PollDto>, res: Response<PollDto>) {
-  const poll = pollsDb.find((p) => p.id === req.params.id);
-  res.json(poll);
+export async function getPolls(req: Request, res: Response<PollDto[]>, next: NextFunction) {
+  provideUser(
+    (user) => {
+      res.json(pollsDb.map((p) => toPollDto(p, user?.id)));
+    },
+    req,
+    next
+  );
 }
+
+export async function createPoll(
+  req: Request<{}, string, CreatePollDto>,
+  res: Response<string>,
+  next: NextFunction
+) {
+  provideUserStrict(
+    (user) => {
+      const dto = req.body;
+
+      if (!dto?.text) {
+        res.status(400).send('Poll text is required');
+      }
+      if (!dto?.options || dto.options.length < 2) {
+        res.status(400).send('At least 2 options are required');
+        return;
+      }
+
+      const poll: Poll = {
+        ...dto,
+        id: uuid(),
+        dateCreated: nowAsString(),
+        createdBy: user,
+        options: dto.options.map((o) => ({
+          ...o,
+          id: uuid(),
+          votedForBy: [],
+        })),
+      };
+
+      pollsDb.push(poll);
+      res.status(201).json(poll.id);
+    },
+    req,
+    next
+  );
+}
+
+export async function getPoll(
+  req: Request<{ id: string }, PollDto>,
+  res: Response<PollDto>,
+  next: NextFunction
+) {
+  provideUser(
+    (user) => {
+      const poll = pollsDb.find((p) => p.id === req.params.id);
+      if (!poll) {
+        res.status(404);
+        return;
+      }
+      res.json(toPollDto(poll, user?.id));
+    },
+    req,
+    next
+  );
+}
+

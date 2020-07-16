@@ -1,40 +1,22 @@
-export interface PollDto {
+export interface Poll {
   id: string;
   text: string;
   imageUri?: string;
   allowMultiple: boolean;
   dateCreated: string;
-  createdBy: UserDto;
-  options: PollOptionDto[];
+  createdBy: User;
+  options: PollOption[];
 }
 
-export interface PollOptionDto {
+export interface PollOption {
   id: string;
   text: string;
   imageUri?: string;
-  voteCount: number;
-  votedForByUser: boolean;
+  votedForBy: User[];
 }
 
-export interface UserDto {
+export interface User {
+  id: string;
   displayName: string;
   avatarUri: string;
-}
-
-export interface CreatePollDto {
-  allowMultiple: boolean;
-  imageUri?: string;
-  text: string;
-  options: CreatePollOptionDto[];
-}
-
-export interface CreatePollOptionDto {
-  imageUri?: string;
-  text: string;
-}
-
-export interface PollVotesDto {
-  id: string;
-  voteCount: number;
-  votedForByUser: boolean;
 }

@@ -1,3 +1,4 @@
+import bodyParser from 'body-parser';
 import cors from 'cors';
 import express from 'express';
 import jwt from 'express-jwt';
@@ -20,14 +21,18 @@ const checkJwt = jwt({
   },
   audience: 'https://purpoll.com',
   algorithms: ['RS256'],
+  requestProperty: 'decodedAccessToken',
 });
 
+const jsonParser = bodyParser.json();
+
+app.use(jsonParser);
 app.use(cors({ origin: '*' }));
 
 app.get('/', (req, res) => res.json('The PurPoll API Server is awake!'));
 
 app.get('/definitions', (req, res) =>
-  res.sendFile('types.ts', {
+  res.sendFile('dtoTypes.ts', {
     root: __dirname,
     headers: { 'Content-Type': 'text/plain' },
   })
